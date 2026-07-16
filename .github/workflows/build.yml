@@ -29,12 +29,15 @@ jobs:
         run: |
           pip install pillow -q
           python3 -c "
-          from PIL import Image
+          from PIL import Image, ImageDraw
           import os
           os.makedirs('res/icon/android', exist_ok=True)
           sizes = {'ldpi':36,'mdpi':48,'hdpi':72,'xhdpi':96,'xxhdpi':144,'xxxhdpi':192}
           for n,s in sizes.items():
-              Image.new('RGBA',(s,s),(27,42,74,255)).save(f'res/icon/android/{n}.png')
+              img = Image.new('RGBA',(s,s),(27,42,74,255))
+              draw = ImageDraw.Draw(img)
+              draw.rectangle([0,0,s-1,s-1], outline=(217,137,30,255), width=max(1,s//20))
+              img.save(f'res/icon/android/{n}.png')
           print('Icons OK')
           "
           
@@ -47,10 +50,10 @@ jobs:
       - name: Add Android platform
         run: cordova platform add android@13.0.0
         
-      - name: Fix Gradle version
+      - name: Fix Gradle to version 8
         run: |
-          sed -i 's|gradle-.*-bin.zip|gradle-8.0-bin.zip|g' platforms/android/gradle/wrapper/gradle-wrapper.properties
-          cat platforms/android/gradle/wrapper/gradle-wrapper.properties
+          find platforms/android -name "gradle-wrapper.properties" -exec sed -i 's/gradle-.*-bin.zip/gradle-8.0-bin.zip/g' {} \;
+          find platforms/android -name "gradle-wrapper.properties" -exec cat {} \;
           
       - name: Build debug APK
         run: cordova build android --debug
