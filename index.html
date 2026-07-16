@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Agent Mobile Money — Suivi journalier</title>
+<style>
+  :root{
+    --navy:#1B2A4A;
+    --navy-deep:#101A30;
+    --paper:#F7F3EC;
+    --paper-dim:#EDE7DA;
+    --amber:#D9891E;
+    --amber-deep:#B56E12;
+    --green:#2F8F5B;
+    --red:#C1443C;
+    --ink:#1B2A4A;
+    --ink-soft:#5C6B85;
+    --line:#DCD4C2;
+    --mono: 'SF Mono', 'Roboto Mono', 'Courier New', monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--navy-deep);}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    min-height:100vh;
+  }
+  #app{
+    width:100%;
+    max-width:480px;
+    min-height:100vh;
+    background:var(--paper);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+
+  /* HEADER */
+  header{
+    background:var(--navy);
+    color:#fff;
+    padding:18px 20px 16px;
+    position:sticky;
+    top:0;
+    z-index:10;
+  }
+  header .row{display:flex; justify-content:space-between; align-items:baseline;}
+  header h1{margin:0; font-size:17px; font-weight:700; letter-spacing:.2px;}
+  header .date{font-size:12px; color:#B9C3DB; font-family:var(--mono);}
+  header .op-badge{
+    display:inline-block; margin-top:8px; font-size:11px; font-weight:700;
+    background:var(--amber); color:#1B1204; padding:3px 9px; border-radius:20px;
+    letter-spacing:.4px;
+  }
+
+  main{flex:1; padding:16px 16px 90px; overflow-y:auto;}
+
+  .card{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .card h2{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--ink-soft); margin:0 0 12px;}
+
+  /* ODOMETER — signature element */
+  .odometer-wrap{
+    background:var(--navy);
+    border-radius:14px;
+    padding:18px 16px;
+    margin-bottom:14px;
+    color:#fff;
+  }
+  .odometer-label{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#B9C3DB; margin-bottom:8px;}
+  .odometer{
+    display:flex;
+    gap:3px;
+    justify-content:center;
+    margin-bottom:6px;
+  }
+  .odometer .digit{
+    background:var(--navy-deep);
+    border:1px solid #2A3B5E;
+    border-radius:4px;
+    width:32px;
+    height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:var(--mono);
+    font-size:26px;
+    font-weight:700;
+    color:var(--amber);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.5);
+  }
+  .odometer .sep{width:8px; display:flex; align-items:flex-end; padding-bottom:6px; justify-content:center; color:#B9C3DB; font-family:var(--mono);}
+  .odometer-sub{text-align:center; font-size:11px; color:#8393B4; font-family:var(--mono);}
+
+  /* STAT GRID */
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px;}
+  .stat{
+    background:#fff; border:1px solid var(--line); border-radius:10px;
+    padding:10px 8px; text-align:center;
+  }
+  .stat .lbl{font-size:10px; text-transform:uppercase; color:var(--ink-soft); letter-spacing:.3px; margin-bottom:4px;}
+  .stat .val{font-family:var(--mono); font-weight:700; font-size:15px;}
+  .stat .cnt{font-size:10px; color:var(--ink-soft); margin-top:2px;}
+  .stat.depot .val{color:var(--green);}
+  .stat.retrait .val{color:var(--red);}
+  .stat.forfait .val{color:var(--amber-deep);}
+
+  .row-between{display:flex; justify-content:space-between; align-items:center;}
+  .kv{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--paper-dim); font-size:14px;}
+  .kv:last-child{border-bottom:none;}
+  .kv .k{color:var(--ink-soft);}
+  .kv .v{font-family:var(--mono); font-weight:700;}
+  .v.ecart-ok{color:var(--green);}
+  .v.ecart-bad{color:var(--red);}
+
+  button{
+    font-family:var(--sans);
+    border:none; cursor:pointer;
+  }
+  .btn-primary{
+    width:100%; background:var(--amber); color:#1B1204; font-weight:700;
+    padding:14px; border-radius:10px; font-size:15px; margin-top:4px;
+  }
+  .btn-primary:active{background:var(--amber-deep);}
+  .btn-secondary{
+    width:100%; background:var(--navy); color:#fff; font-weight:700;
+    padding:14px; border-radius:10px; font-size:15px; margin-top:8px;
+  }
+  .btn-ghost{
+    width:100%; background:transparent; color:var(--ink-soft); font-weight:600;
+    padding:10px; border-radius:10px; font-size:13px; border:1px dashed var(--line);
+  }
+
+  input, select{
+    width:100%; padding:12px; border:1px solid var(--line); border-radius:10px;
+    font-size:15px; font-family:var(--mono); margin-bottom:10px; background:#fff;
+  }
+  label{font-size:12px; color:var(--ink-soft); display:block; margin-bottom:4px; font-family:var(--sans);}
+
+  .type-picker{display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:10px;}
+  .type-picker button{
+    padding:10px 4px; border-radius:8px; border:1.5px solid var(--line);
+    background:#fff; font-size:11px; font-weight:700; color:var(--ink-soft);
+  }
+  .type-picker button.active{border-color:var(--navy); background:var(--navy); color:#fff;}
+
+  /* TX LIST */
+  .tx-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0; border-bottom:1px solid var(--paper-dim);
+  }
+  .tx-item:last-child{border-bottom:none;}
+  .tx-left{display:flex; align-items:center; gap:10px;}
+  .tx-badge{
+    width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:800; color:#fff; flex-shrink:0;
+  }
+  .tx-badge.depot{background:var(--green);}
+  .tx-badge.retrait{background:var(--red);}
+  .tx-badge.paiement_forfait{background:var(--amber-deep);}
+  .tx-info .tx-type{font-size:13px; font-weight:700;}
+  .tx-info .tx-time{font-size:11px; color:var(--ink-soft); font-family:var(--mono);}
+  .tx-right{text-align:right;}
+  .tx-right .tx-montant{font-family:var(--mono); font-weight:700; font-size:14px;}
+  .tx-right .tx-comm{font-family:var(--mono); font-size:11px; color:var(--amber-deep);}
+
+  .empty{text-align:center; padding:30px 10px; color:var(--ink-soft); font-size:13px;}
+
+  /* NAV */
+  nav{
+    position:fixed; bottom:0; left:0; right:0;
+    display:flex; justify-content:center;
+    z-index:20;
+  }
+  nav .bar{
+    width:100%; max-width:480px; background:#fff; border-top:1px solid var(--line);
+    display:flex; padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  nav button{
+    flex:1; background:transparent; padding:8px 2px; font-size:10.5px; font-weight:700;
+    color:var(--ink-soft); display:flex; flex-direction:column; align-items:center; gap:3px;
+  }
+  nav button .ic{font-size:18px;}
+  nav button.active{color:var(--navy);}
+  nav button.active .ic{color:var(--amber-deep);}
+
+  /* MODAL */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(16,26,48,.6); z-index:50;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .modal{
+    width:100%; max-width:480px; background:var(--paper); border-radius:18px 18px 0 0;
+    padding:20px; max-height:85vh; overflow-y:auto;
+  }
+  .modal h3{margin:0 0 4px; font-size:17px;}
+  .modal .sub{font-size:12px; color:var(--ink-soft); margin-bottom:16px;}
+  .hidden{display:none !important;}
+
+  .fab-add{
+    position:fixed; bottom:80px; right:calc(50% - 240px + 18px);
+    background:var(--amber); color:#1B1204; width:56px; height:56px; border-radius:50%;
+    font-size:28px; font-weight:700; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 16px rgba(0,0,0,.25); z-index:15;
+  }
+  @media (max-width:520px){ .fab-add{ right:20px; } }
+
+  .badge-note{
+    font-size:11px; background:var(--paper-dim); color:var(--ink-soft);
+    padding:8px 10px; border-radius:8px; margin-top:6px; line-height:1.4;
+  }
+
+  /* MODE TOGGLE (modal ajout transaction) */
+  .mode-toggle{display:flex; gap:6px; margin-bottom:14px; background:var(--paper-dim); padding:4px; border-radius:10px;}
+  .mode-toggle button{flex:1; padding:9px; border-radius:8px; font-size:12.5px; font-weight:700; color:var(--ink-soft); background:transparent;}
+  .mode-toggle button.active{background:#fff; color:var(--navy); box-shadow:0 1px 3px rgba(0,0,0,.12);}
+
+  textarea{
+    width:100%; padding:12px; border:1px solid var(--line); border-radius:10px;
+    font-size:14px; font-family:var(--mono); margin-bottom:10px; background:#fff;
+    resize:vertical; min-height:90px;
+  }
+  .sms-result{
+    background:var(--paper-dim); border-radius:10px; padding:12px; margin-bottom:10px; font-size:13px;
+  }
+  .sms-result .sr-row{display:flex; justify-content:space-between; padding:3px 0;}
+  .sms-result .sr-row .k{color:var(--ink-soft);}
+  .sms-result .sr-row .v{font-family:var(--mono); font-weight:700;}
+  .sms-fail{color:var(--red); font-size:12.5px; margin-bottom:10px;}
+
+  /* HISTORIQUE navigation */
+  .back-btn{
+    display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700;
+    color:var(--navy); margin-bottom:10px; padding:4px 0;
+  }
+  .hist-card{cursor:pointer;}
+  .export-bar{display:flex; gap:8px; margin-bottom:14px;}
+  .export-bar button{flex:1; padding:11px; border-radius:10px; font-size:12.5px; font-weight:700;}
+  .btn-export{background:var(--navy); color:#fff;}
+  .btn-export-csv{background:#fff; color:var(--navy); border:1.5px solid var(--navy);}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="row">
+      <h1>Suivi Journalier</h1>
+      <span class="date" id="hdrDate"></span>
+    </div>
+    <span class="op-badge">ORANGE MONEY</span>
+    <button id="btnSettings" style="position:absolute; top:16px; right:16px; background:transparent; color:#fff; font-size:18px; padding:4px 8px;">⚙</button>
+  </header>
+
+  <main id="main"></main>
+
+  <button class="fab-add" id="fabAdd">+</button>
+
+  <nav>
+    <div class="bar">
+      <button data-tab="accueil" class="active"><span class="ic">⌂</span>Accueil</button>
+      <button data-tab="transactions"><span class="ic">≡</span>Transactions</button>
+      <button data-tab="cloture"><span class="ic">✓</span>Clôture</button>
+      <button data-tab="historique"><span class="ic">▤</span>Historique</button>
+    </div>
+  </nav>
+</div>
+
+<script>
+/* ============ STOCKAGE ============ */
+const STORE_KEY = 'agentMM_jours_v1';
+
+function loadDays(){
+  try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ return {}; }
+}
+function saveDays(days){ localStorage.setItem(STORE_KEY, JSON.stringify(days)); }
+
+function todayKey(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+function fmtDateFR(key){
+  const d = new Date(key+'T00:00:00');
+  return d.toLocaleDateString('fr-FR', {weekday:'short', day:'2-digit', month:'short'});
+}
+function nowHM(){
+  const d = new Date();
+  return d.toTimeString().slice(0,5);
+}
+function fmtNum(n){
+  return (Math.round(n||0)).toLocaleString('fr-FR');
+}
+
+let days = loadDays();
+let currentTab = 'accueil';
+
+function getOrCreateDay(key){
+  if(!days[key]){
+    days[key] = {
+      date: key,
+      matin: null,          // {cash_debut, solde_om_debut, heure}
+      transactions: [],      // [{id,type,montant,commission,heure,source}]
+      cloture: null           // {cash_reel, solde_om_reel, heure}
+    };
+    saveDays(days);
+  }
+  return days[key];
+}
+
+/* ============ CALCULS ============ */
+// Hypothèse de départ (à valider avec les vrais SMS) :
+//  - dépôt        : agent encaisse du cash, débite son solde OM -> cash += montant, solde_om -= montant
+//  - retrait      : agent décaisse du cash, crédite son solde OM -> cash -= montant, solde_om += montant
+//  - paiement_forfait / crédit : agent encaisse du cash, débite son solde OM -> cash += montant, solde_om -= montant
+function calcAttendu(day){
+  const m = day.matin || {cash_debut:0, solde_om_debut:0};
+  let cash = m.cash_debut, om = m.solde_om_debut;
+  let totDepot=0, totRetrait=0, totForfait=0, totCommission=0;
+  let cntDepot=0, cntRetrait=0, cntForfait=0;
+  day.transactions.forEach(t=>{
+    totCommission += (t.commission||0);
+    if(t.type==='depot'){ cash+=t.montant; om-=t.montant; totDepot+=t.montant; cntDepot++; }
+    else if(t.type==='retrait'){ cash-=t.montant; om+=t.montant; totRetrait+=t.montant; cntRetrait++; }
+    else if(t.type==='paiement_forfait'){ cash+=t.montant; om-=t.montant; totForfait+=t.montant; cntForfait++; }
+  });
+  return {cash_attendu:cash, om_attendu:om, totDepot, totRetrait, totForfait, totCommission, cntDepot, cntRetrait, cntForfait};
+}
+
+/* ============ PARSING SMS (Orange Money) ============ */
+// Détection par mots-clés dans le texte du SMS, insensible à la casse/accents.
+// À recalibrer avec de vrais textes de SMS si le format ne matche pas.
+function normalizeTxt(s){
+  return (s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // enlève les accents
+}
+
+function detectType(norm){
+  if(norm.includes('depot')) return 'depot';
+  if(norm.includes('retrait')) return 'retrait';
+  if(norm.includes('forfait') || norm.includes('credit')) return 'paiement_forfait';
+  return null;
+}
+
+// Cherche un montant : un nombre (avec espaces/points/virgules comme séparateurs de milliers)
+// suivi ou précédé de F / FCFA / CFA. Retourne le premier trouvé.
+function extractAmount(text, contextKeywords){
+  const re = /(\d[\d\s.,]{1,12}\d|\d)\s*(?:f\s?cfa|fcfa|cfa|f)\b/gi;
+  let matches = [...text.matchAll(re)];
+  if(matches.length===0) return null;
+  // si des mots-clés de contexte sont fournis, essaie de prioriser une ligne qui les contient
+  if(contextKeywords){
+    for(const m of matches){
+      const around = text.slice(Math.max(0,m.index-25), m.index+25).toLowerCase();
+      if(contextKeywords.some(k=>around.includes(k))) return cleanNumber(m[1]);
+    }
+  }
+  return cleanNumber(matches[0][1]);
+}
+function cleanNumber(raw){
+  const n = parseFloat(raw.replace(/\s/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.'));
+  return isNaN(n) ? null : n;
+}
+
+function parseSmsOrangeMoney(rawText){
+  const norm = normalizeTxt(rawText);
+  const type = detectType(norm);
+  if(!type) return {ok:false, reason:"Aucun mot-clé (dépôt / retrait / forfait / crédit) trouvé dans ce SMS."};
+
+  const montant = extractAmount(rawText, ['depot','retrait','montant','transaction']);
+  if(montant===null) return {ok:false, reason:"Montant introuvable dans ce SMS."};
+
+  const commission = extractAmount(rawText, ['commission']) || 0;
+
+  return {ok:true, type, montant, commission, raw: rawText};
+}
+
+
+const mainEl = document.getElementById('main');
+document.getElementById('hdrDate').textContent = fmtDateFR(todayKey());
+
+function render(){
+  if(currentTab==='accueil') renderAccueil();
+  else if(currentTab==='transactions') renderTransactions();
+  else if(currentTab==='cloture') renderCloture();
+  else if(currentTab==='historique') renderHistorique();
+  document.querySelectorAll('nav button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab===currentTab);
+  });
+  document.getElementById('fabAdd').classList.toggle('hidden', currentTab==='historique');
+}
+
+function renderAccueil(){
+  const key = todayKey();
+  const day = getOrCreateDay(key);
+
+  if(!day.matin){
+    mainEl.innerHTML = `
+      <div class="card">
+        <h2>Démarrage de la journée</h2>
+        <p style="font-size:13px;color:var(--ink-soft);margin-top:-6px;">
+          Renseigne ton espèce en caisse et ton solde Orange Money actuels. Ça simplifie la clôture ce soir.
+        </p>
+        <label>Espèce en caisse (FCFA)</label>
+        <input type="number" inputmode="numeric" id="inCashDebut" placeholder="Ex: 150000">
+        <label>Solde Orange Money (FCFA)</label>
+        <input type="number" inputmode="numeric" id="inOmDebut" placeholder="Ex: 500000">
+        <button class="btn-primary" id="btnStartDay">Démarrer la journée</button>
+      </div>`;
+    document.getElementById('btnStartDay').onclick = ()=>{
+      const cash = parseFloat(document.getElementById('inCashDebut').value)||0;
+      const om = parseFloat(document.getElementById('inOmDebut').value)||0;
+      day.matin = {cash_debut:cash, solde_om_debut:om, heure:nowHM()};
+      saveDays(days);
+      render();
+    };
+    return;
+  }
+
+  const c = calcAttendu(day);
+  const nbTx = day.transactions.length;
+  const commStr = fmtNum(c.totCommission).padStart(6,'0').split('');
+
+  mainEl.innerHTML = `
+    <div class="odometer-wrap">
+      <div class="odometer-label">Commissions du jour</div>
+      <div class="odometer">
+        ${commStr.map(d=>`<div class="digit">${d}</div>`).join('')}
+        <div class="sep">F</div>
+      </div>
+      <div class="odometer-sub">${nbTx} transaction${nbTx>1?'s':''} aujourd'hui</div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat depot"><div class="lbl">Dépôts</div><div class="val">${fmtNum(c.totDepot)}</div><div class="cnt">${c.cntDepot} tx</div></div>
+      <div class="stat retrait"><div class="lbl">Retraits</div><div class="val">${fmtNum(c.totRetrait)}</div><div class="cnt">${c.cntRetrait} tx</div></div>
+      <div class="stat forfait"><div class="lbl">Forfaits</div><div class="val">${fmtNum(c.totForfait)}</div><div class="cnt">${c.cntForfait} tx</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Estimation en direct</h2>
+      <div class="kv"><span class="k">Espèce en caisse (départ ${fmtNum(day.matin.cash_debut)})</span><span class="v">${fmtNum(c.cash_attendu)} F</span></div>
+      <div class="kv"><span class="k">Solde Orange Money (départ ${fmtNum(day.matin.solde_om_debut)})</span><span class="v">${fmtNum(c.om_attendu)} F</span></div>
+      <div class="badge-note">Ces montants sont calculés à partir de tes transactions saisies. La clôture du soir te permet de comparer avec les vrais chiffres.</div>
+    </div>
+  `;
+}
+
+function renderTransactions(){
+  const key = todayKey();
+  const day = getOrCreateDay(key);
+  const list = [...day.transactions].reverse();
+  mainEl.innerHTML = `
+    <div class="card" style="padding-bottom:6px;">
+      <h2>Transactions — ${fmtDateFR(key)}</h2>
+      ${list.length===0 ? `<div class="empty">Aucune transaction pour l'instant.<br>Touche le bouton + pour en ajouter une.</div>` :
+        list.map(t=>txRow(t)).join('')}
+    </div>
+  `;
+}
+
+function txLabel(type){
+  return type==='depot' ? 'Dépôt' : type==='retrait' ? 'Retrait' : 'Forfait/Crédit';
+}
+function txIcon(type){
+  return type==='depot' ? '↓' : type==='retrait' ? '↑' : '☎';
+}
+function txRow(t){
+  return `
+    <div class="tx-item">
+      <div class="tx-left">
+        <div class="tx-badge ${t.type}">${txIcon(t.type)}</div>
+        <div class="tx-info">
+          <div class="tx-type">${txLabel(t.type)}</div>
+          <div class="tx-time">${t.heure} · ${t.source==='sms'?'SMS auto':'manuel'}</div>
+        </div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-montant">${fmtNum(t.montant)} F</div>
+        <div class="tx-comm">+${fmtNum(t.commission)} F comm.</div>
+      </div>
+    </div>`;
+}
+
+function renderCloture(){
+  const key = todayKey();
+  const day = getOrCreateDay(key);
+
+  if(!day.matin){
+    mainEl.innerHTML = `<div class="card"><div class="empty">Démarre d'abord ta journée depuis l'onglet Accueil.</div></div>`;
+    return;
+  }
+
+  const c = calcAttendu(day);
+
+  if(day.cloture){
+    const ecartCash = day.cloture.cash_reel - c.cash_attendu;
+    const ecartOm = day.cloture.solde_om_reel - c.om_attendu;
+    mainEl.innerHTML = `
+      <div class="card">
+        <h2>Journée clôturée à ${day.cloture.heure}</h2>
+        <div class="kv"><span class="k">Caisse attendue</span><span class="v">${fmtNum(c.cash_attendu)} F</span></div>
+        <div class="kv"><span class="k">Caisse déclarée</span><span class="v">${fmtNum(day.cloture.cash_reel)} F</span></div>
+        <div class="kv"><span class="k">Écart caisse</span><span class="v ${ecartCash===0?'ecart-ok':'ecart-bad'}">${ecartCash>0?'+':''}${fmtNum(ecartCash)} F</span></div>
+        <div class="kv"><span class="k">Solde OM attendu</span><span class="v">${fmtNum(c.om_attendu)} F</span></div>
+        <div class="kv"><span class="k">Solde OM déclaré</span><span class="v">${fmtNum(day.cloture.solde_om_reel)} F</span></div>
+        <div class="kv"><span class="k">Écart solde OM</span><span class="v ${ecartOm===0?'ecart-ok':'ecart-bad'}">${ecartOm>0?'+':''}${fmtNum(ecartOm)} F</span></div>
+        <div class="kv"><span class="k">Total commissions</span><span class="v" style="color:var(--amber-deep)">${fmtNum(c.totCommission)} F</span></div>
+      </div>
+    `;
+    return;
+  }
+
+  mainEl.innerHTML = `
+    <div class="card">
+      <h2>Clôture de la journée</h2>
+      <div class="kv"><span class="k">Caisse attendue (calcul)</span><span class="v">${fmtNum(c.cash_attendu)} F</span></div>
+      <div class="kv"><span class="k">Solde OM attendu (calcul)</span><span class="v">${fmtNum(c.om_attendu)} F</span></div>
+    </div>
+    <div class="card">
+      <h2>Ce que tu comptes réellement</h2>
+      <label>Espèce réelle en caisse (FCFA)</label>
+      <input type="number" inputmode="numeric" id="inCashReel" placeholder="Compte ta caisse">
+      <label>Solde Orange Money réel (FCFA)</label>
+      <input type="number" inputmode="numeric" id="inOmReel" placeholder="Regarde ton solde SIM">
+      <button class="btn-primary" id="btnCloture">Clôturer la journée</button>
+    </div>
+  `;
+  document.getElementById('btnCloture').onclick = ()=>{
+    const cashReel = parseFloat(document.getElementById('inCashReel').value);
+    const omReel = parseFloat(document.getElementById('inOmReel').value);
+    if(isNaN(cashReel) || isNaN(omReel)){ alert("Renseigne les deux montants."); return; }
+    day.cloture = {cash_reel:cashReel, solde_om_reel:omReel, heure:nowHM()};
+    saveDays(days);
+    render();
+  };
+}
+
+let histSelectedDay = null;
+
+function renderHistorique(){
+  const keys = Object.keys(days).sort().reverse();
+
+  if(histSelectedDay && days[histSelectedDay]){
+    const day = days[histSelectedDay];
+    const c = calcAttendu(day);
+    const list = [...day.transactions].reverse();
+    mainEl.innerHTML = `
+      <div class="back-btn" id="btnBackHist">← Retour à l'historique</div>
+      <div class="card">
+        <h2>${fmtDateFR(histSelectedDay)}</h2>
+        <div class="kv"><span class="k">Espèce départ</span><span class="v">${fmtNum(day.matin.cash_debut)} F</span></div>
+        <div class="kv"><span class="k">Solde OM départ</span><span class="v">${fmtNum(day.matin.solde_om_debut)} F</span></div>
+        <div class="kv"><span class="k">Total commissions</span><span class="v" style="color:var(--amber-deep)">${fmtNum(c.totCommission)} F</span></div>
+        ${day.cloture ? `
+          <div class="kv"><span class="k">Caisse déclarée à la clôture</span><span class="v">${fmtNum(day.cloture.cash_reel)} F</span></div>
+          <div class="kv"><span class="k">Solde OM déclaré à la clôture</span><span class="v">${fmtNum(day.cloture.solde_om_reel)} F</span></div>
+        ` : `<div class="badge-note">Journée non clôturée.</div>`}
+      </div>
+      <div class="card" style="padding-bottom:6px;">
+        <h2>Transactions (${list.length})</h2>
+        ${list.length===0 ? `<div class="empty">Aucune transaction ce jour-là.</div>` : list.map(t=>txRow(t)).join('')}
+      </div>
+    `;
+    document.getElementById('btnBackHist').onclick = ()=>{ histSelectedDay=null; render(); };
+    return;
+  }
+
+  if(keys.length===0){
+    mainEl.innerHTML = `<div class="card"><div class="empty">Pas encore d'historique.</div></div>`;
+    return;
+  }
+
+  mainEl.innerHTML = `
+    <div class="export-bar">
+      <button class="btn-export" id="btnExportCsv">⬇ Exporter CSV</button>
+      <button class="btn-export-csv" id="btnExportJson">⬇ Sauvegarde JSON</button>
+    </div>
+    ${keys.map(k=>{
+      const day = days[k];
+      const c = calcAttendu(day);
+      const cloturee = !!day.cloture;
+      return `
+        <div class="card hist-card" data-day="${k}">
+          <div class="row-between">
+            <h2 style="margin:0;">${fmtDateFR(k)}</h2>
+            <span style="font-size:11px; font-weight:700; color:${cloturee?'var(--green)':'var(--ink-soft)'};">
+              ${cloturee?'✓ Clôturée':'En cours'}
+            </span>
+          </div>
+          <div class="kv"><span class="k">Transactions</span><span class="v">${day.transactions.length}</span></div>
+          <div class="kv"><span class="k">Commissions</span><span class="v" style="color:var(--amber-deep)">${fmtNum(c.totCommission)} F</span></div>
+        </div>`;
+    }).join('')}
+  `;
+  mainEl.querySelectorAll('.hist-card').forEach(el=>{
+    el.onclick = ()=>{ histSelectedDay = el.dataset.day; render(); };
+  });
+  document.getElementById('btnExportCsv').onclick = exportCSV;
+  document.getElementById('btnExportJson').onclick = exportJSON;
+}
+
+/* ============ EXPORT ============ */
+function downloadBlob(content, filename, mime){
+  const blob = new Blob([content], {type:mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+
+function exportCSV(){
+  const rows = [['Date','Heure','Type','Montant','Commission','Source']];
+  Object.keys(days).sort().forEach(k=>{
+    days[k].transactions.forEach(t=>{
+      rows.push([k, t.heure, txLabel(t.type), t.montant, t.commission, t.source]);
+    });
+  });
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  downloadBlob('\uFEFF'+csv, `transactions_${todayKey()}.csv`, 'text/csv;charset=utf-8');
+}
+
+function exportJSON(){
+  downloadBlob(JSON.stringify(days, null, 2), `sauvegarde_${todayKey()}.json`, 'application/json');
+}
+
+/* ============ AJOUT TRANSACTION (modal) ============ */
+function openAddTxModal(){
+  const key = todayKey();
+  const day = getOrCreateDay(key);
+  if(!day.matin){ alert("Démarre d'abord ta journée depuis l'onglet Accueil."); currentTab='accueil'; render(); return; }
+
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Nouvelle transaction</h3>
+      <div class="sub">Orange Money</div>
+      <div class="mode-toggle">
+        <button data-mode="manuel" class="active">Saisie manuelle</button>
+        <button data-mode="sms">Coller un SMS</button>
+      </div>
+
+      <div id="zoneManuel">
+        <div class="type-picker">
+          <button data-type="depot" class="active">Dépôt</button>
+          <button data-type="retrait">Retrait</button>
+          <button data-type="paiement_forfait">Forfait/Crédit</button>
+        </div>
+        <label>Montant (FCFA)</label>
+        <input type="number" inputmode="numeric" id="inMontant" placeholder="Ex: 10000">
+        <label>Commission gagnée (FCFA)</label>
+        <input type="number" inputmode="numeric" id="inCommission" placeholder="Ex: 150">
+        <button class="btn-primary" id="btnSaveTx">Enregistrer</button>
+      </div>
+
+      <div id="zoneSms" class="hidden">
+        <label>Colle le texte du SMS Orange Money</label>
+        <textarea id="inSmsText" placeholder="Ex: Vous avez recu un depot de 10000 F. Commission 150 F. Nouveau solde ..."></textarea>
+        <button class="btn-secondary" id="btnParseSms">Analyser le SMS</button>
+        <div id="smsResultZone"></div>
+      </div>
+
+      <button class="btn-ghost" id="btnCancelTx" style="margin-top:8px;">Annuler</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  let selType = 'depot';
+  let mode = 'manuel';
+  let parsedTx = null;
+
+  overlay.querySelectorAll('.mode-toggle button').forEach(b=>{
+    b.onclick = ()=>{
+      overlay.querySelectorAll('.mode-toggle button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      mode = b.dataset.mode;
+      overlay.querySelector('#zoneManuel').classList.toggle('hidden', mode!=='manuel');
+      overlay.querySelector('#zoneSms').classList.toggle('hidden', mode!=='sms');
+    };
+  });
+
+  overlay.querySelectorAll('.type-picker button').forEach(b=>{
+    b.onclick = ()=>{
+      overlay.querySelectorAll('.type-picker button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      selType = b.dataset.type;
+    };
+  });
+
+  overlay.querySelector('#btnCancelTx').onclick = ()=> overlay.remove();
+
+  overlay.querySelector('#btnSaveTx').onclick = ()=>{
+    const montant = parseFloat(document.getElementById('inMontant').value);
+    const commission = parseFloat(document.getElementById('inCommission').value)||0;
+    if(!montant || montant<=0){ alert("Entre un montant valide."); return; }
+    day.transactions.push({
+      id: Date.now().toString(36),
+      type: selType,
+      montant, commission,
+      heure: nowHM(),
+      source: 'manuel'
+    });
+    saveDays(days);
+    overlay.remove();
+    currentTab = 'transactions';
+    render();
+  };
+
+  overlay.querySelector('#btnParseSms').onclick = ()=>{
+    const txt = document.getElementById('inSmsText').value.trim();
+    const resultZone = document.getElementById('smsResultZone');
+    if(!txt){ resultZone.innerHTML = `<div class="sms-fail">Colle d'abord le texte du SMS.</div>`; return; }
+    const res = parseSmsOrangeMoney(txt);
+    if(!res.ok){
+      resultZone.innerHTML = `<div class="sms-fail">${res.reason} Tu peux corriger en mode "Saisie manuelle".</div>`;
+      parsedTx = null;
+      return;
+    }
+    parsedTx = res;
+    resultZone.innerHTML = `
+      <div class="sms-result">
+        <div class="sr-row"><span class="k">Type détecté</span><span class="v">${txLabel(res.type)}</span></div>
+        <div class="sr-row"><span class="k">Montant</span><span class="v">${fmtNum(res.montant)} F</span></div>
+        <div class="sr-row"><span class="k">Commission</span><span class="v">${fmtNum(res.commission)} F</span></div>
+      </div>
+      <button class="btn-primary" id="btnConfirmSms">Confirmer et enregistrer</button>
+    `;
+    document.getElementById('btnConfirmSms').onclick = ()=>{
+      day.transactions.push({
+        id: Date.now().toString(36),
+        type: parsedTx.type,
+        montant: parsedTx.montant,
+        commission: parsedTx.commission,
+        heure: nowHM(),
+        source: 'sms',
+        raw_sms: parsedTx.raw
+      });
+      saveDays(days);
+      overlay.remove();
+      currentTab = 'transactions';
+      render();
+    };
+  };
+}
+
+/* ============ REGLAGES + JOURNAL SMS (diagnostic) ============ */
+const SMS_LOG_KEY = 'agentMM_sms_log_v1';
+const SMS_FILTER_KEY = 'agentMM_sms_filter_v1';
+
+function getSmsLog(){ try{ return JSON.parse(localStorage.getItem(SMS_LOG_KEY))||[]; }catch(e){ return []; } }
+function pushSmsLog(entry){
+  const log = getSmsLog();
+  log.unshift(entry);
+  if(log.length>20) log.length = 20;
+  localStorage.setItem(SMS_LOG_KEY, JSON.stringify(log));
+}
+function getSmsFilter(){ return localStorage.getItem(SMS_FILTER_KEY)||''; }
+function setSmsFilter(v){ localStorage.setItem(SMS_FILTER_KEY, v||''); }
+
+function openSettingsModal(){
+  const overlay = document.createElement('div');
+  overlay.className='modal-overlay';
+  const log = getSmsLog();
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>Réglages</h3>
+      <div class="sub">Lecture automatique des SMS Orange Money</div>
+      <div class="badge-note" style="margin-bottom:12px;"><strong>Statut plugin:</strong> <span id="smsPluginStatus">Vérification...</span></div>
+      <label>Expéditeur à surveiller (optionnel)</label>
+      <input type="text" id="inSmsFilter" placeholder="Ex: OrangeMoney" value="${getSmsFilter()}">
+      <div class="badge-note">Laisse vide pour analyser tous les SMS reçus. Si tu remplis ce champ, seuls les SMS venant de cet expéditeur seront traités.</div>
+      <button class="btn-primary" id="btnSaveFilter" style="margin-top:12px;">Enregistrer</button>
+
+      <h3 style="margin-top:22px;">Derniers SMS reçus (diagnostic)</h3>
+      <div class="sub">Utile pour vérifier que le format est bien reconnu</div>
+      ${log.length===0 ? `<div class="empty">Aucun SMS reçu par l'app pour l'instant. (La lecture auto ne fonctionne que dans l'APK Android, pas dans le navigateur.)</div>` :
+        log.map(e=>`
+          <div class="sms-result" style="margin-bottom:8px;">
+            <div class="sr-row"><span class="k">${e.time}</span><span class="v" style="color:${e.ok?'var(--green)':'var(--red)'}">${e.ok?'✓ reconnu':'✗ non reconnu'}</span></div>
+            <div style="font-family:var(--mono); font-size:12px; margin-top:4px; color:var(--ink-soft); word-break:break-word;">${(e.body||'').slice(0,140)}</div>
+          </div>
+        `).join('')}
+      <button class="btn-ghost" id="btnCloseSettings" style="margin-top:8px;">Fermer</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  var statusEl = document.getElementById('smsPluginStatus');
+  if(statusEl){
+    if(window.cordova && cordova.plugins && cordova.plugins.SMSReceive){
+      statusEl.textContent = '✓ Plugin SMS chargé';
+      statusEl.style.color = '#2F8F5B';
+    } else {
+      statusEl.textContent = '✗ Plugin SMS non disponible (mode navigateur ?)';
+      statusEl.style.color = '#C1443C';
+    }
+  }
+  overlay.querySelector('#btnCloseSettings').onclick = ()=> overlay.remove();
+  overlay.querySelector('#btnSaveFilter').onclick = ()=>{
+    setSmsFilter(document.getElementById('inSmsFilter').value.trim());
+    overlay.remove();
+    openSettingsModal(); // reopen refreshed
+  };
+}
+
+/* ============ PONT NATIF SMS (Cordova) ============
+   Nécessite le plugin cordova-plugin-android-sms-listener (ou équivalent)
+   déclaré dans config.xml. Ne fonctionne que dans l'APK, pas dans un
+   navigateur classique — c'est normal si rien ne se passe ici en test web.
+*/
+function handleIncomingSms(sender, body){
+  const filter = getSmsFilter();
+  if(filter && !normalizeTxt(sender||'').includes(normalizeTxt(filter))){
+    return; // expéditeur ignoré
+  }
+  const res = parseSmsOrangeMoney(body);
+  pushSmsLog({time:nowHM()+' '+todayKey(), sender, body, ok:res.ok});
+
+  if(!res.ok) return; // SMS non reconnu, laissé dans le journal pour diagnostic
+
+  const key = todayKey();
+  const day = getOrCreateDay(key);
+  if(!day.matin) return; // journée pas encore démarrée, on n'enregistre pas
+
+  day.transactions.push({
+    id: Date.now().toString(36),
+    type: res.type,
+    montant: res.montant,
+    commission: res.commission,
+    heure: nowHM(),
+    source: 'sms',
+    raw_sms: body
+  });
+  saveDays(days);
+  if(currentTab==='accueil' || currentTab==='transactions') render();
+}
+
+document.addEventListener('deviceready', function(){
+  if(window.cordova && cordova.plugins && cordova.plugins.permissions){
+    var permissions = cordova.plugins.permissions;
+    var perms = [permissions.READ_SMS, permissions.RECEIVE_SMS, permissions.SEND_SMS];
+    permissions.requestPermissions(perms, function(status){
+      console.log('Permissions SMS:', status);
+      startSmsWatch();
+    }, function(err){
+      console.warn('Permissions SMS refusees:', err);
+      startSmsWatch();
+    });
+  } else {
+    startSmsWatch();
+  }
+});
+
+function startSmsWatch(){
+  if(window.cordova && cordova.plugins && cordova.plugins.SMSReceive){
+    cordova.plugins.SMSReceive.startWatch(
+      function(){
+        console.log('SMS watch demarre');
+        document.addEventListener('onSMSArrive', function(message){
+          const address = message.address || (message.data && message.data.originatingAddress) || '';
+          const body = message.body || (message.data && message.data.body) || '';
+          handleIncomingSms(address, body);
+        });
+      },
+      function(err){
+        console.warn("Lecture SMS indisponible:", err);
+      }
+    );
+  }
+}
+
+
+document.querySelectorAll('nav button').forEach(b=>{
+  b.onclick = ()=>{
+    currentTab = b.dataset.tab;
+    if(currentTab==='historique') histSelectedDay = null;
+    render();
+  };
+});
+document.getElementById('fabAdd').onclick = openAddTxModal;
+document.getElementById('btnSettings').onclick = openSettingsModal;
+
+render();
+</script>
+<script src="cordova.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.agentmobilemoney.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>Agent Mobile Money</name>
+    <description>Suivi journalier pour agent Orange Money</description>
+    <author>Agent Mobile Money</author>
+    <content src="index.html" />
+    <access origin="*" />
+    <preference name="Orientation" value="portrait" />
+    <preference name="BackgroundColor" value="0xFF101A30" />
+    <preference name="StatusBarBackgroundColor" value="#1B2A4A" />
+    <platform name="android">
+        <config-file parent="/manifest" target="AndroidManifest.xml">
+            <uses-permission android:name="android.permission.RECEIVE_SMS" />
+            <uses-permission android:name="android.permission.READ_SMS" />
+            <uses-permission android:name="android.permission.SEND_SMS" />
+        </config-file>
+    </platform>
+</widget>

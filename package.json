@@ -1,0 +1,26 @@
+{
+  "name": "agent-mobile-money",
+  "displayName": "Agent Mobile Money",
+  "version": "1.0.0",
+  "description": "Suivi journalier pour agent Orange Money",
+  "main": "index.js",
+  "scripts": {
+    "build": "cordova build android --release",
+    "build-debug": "cordova build android --debug",
+    "run": "cordova run android"
+  },
+  "keywords": ["ecosystem:cordova"],
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "cordova-android": "^13.0.0",
+    "cordova-plugin-sms-receive": "^2.0.0",
+    "cordova-plugin-android-permissions": "^1.1.5"
+  },
+  "cordova": {
+    "platforms": ["android"],
+    "plugins": {
+      "cordova-plugin-sms-receive": {},
+      "cordova-plugin-android-permissions": {}
+    }
+  }
+}
