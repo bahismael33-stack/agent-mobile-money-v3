@@ -24,10 +24,20 @@ jobs:
           
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 11076708
-          packages: 'build-tools;34.0.0 platforms;android-34'
         
+      - name: Generate icons
+        run: |
+          pip install pillow -q
+          python3 -c "
+          from PIL import Image
+          import os
+          os.makedirs('res/icon/android', exist_ok=True)
+          sizes = {'ldpi':36,'mdpi':48,'hdpi':72,'xhdpi':96,'xxhdpi':144,'xxxhdpi':192}
+          for n,s in sizes.items():
+              Image.new('RGBA',(s,s),(27,42,74,255)).save(f'res/icon/android/{n}.png')
+          print('Icons OK')
+          "
+          
       - name: Install Cordova
         run: npm install -g cordova
         
@@ -37,6 +47,11 @@ jobs:
       - name: Add Android platform
         run: cordova platform add android@13.0.0
         
+      - name: Fix Gradle version
+        run: |
+          sed -i 's|gradle-.*-bin.zip|gradle-8.0-bin.zip|g' platforms/android/gradle/wrapper/gradle-wrapper.properties
+          cat platforms/android/gradle/wrapper/gradle-wrapper.properties
+          
       - name: Build debug APK
         run: cordova build android --debug
         
