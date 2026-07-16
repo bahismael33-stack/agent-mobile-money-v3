@@ -14,33 +14,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '18'
           
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '11'
           
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         
-      - name: Generate icons
-        run: |
-          pip install pillow -q
-          python3 -c "
-          from PIL import Image, ImageDraw
-          import os
-          os.makedirs('res/icon/android', exist_ok=True)
-          sizes = {'ldpi':36,'mdpi':48,'hdpi':72,'xhdpi':96,'xxhdpi':144,'xxxhdpi':192}
-          for n,s in sizes.items():
-              img = Image.new('RGBA',(s,s),(27,42,74,255))
-              draw = ImageDraw.Draw(img)
-              draw.rectangle([0,0,s-1,s-1], outline=(217,137,30,255), width=max(1,s//20))
-              img.save(f'res/icon/android/{n}.png')
-          print('Icons OK')
-          "
-          
       - name: Install Cordova
         run: npm install -g cordova
         
@@ -48,13 +32,8 @@ jobs:
         run: npm install
         
       - name: Add Android platform
-        run: cordova platform add android@13.0.0
+        run: cordova platform add android@11.0.0
         
-      - name: Fix Gradle to version 8
-        run: |
-          find platforms/android -name "gradle-wrapper.properties" -exec sed -i 's/gradle-.*-bin.zip/gradle-8.0-bin.zip/g' {} \;
-          find platforms/android -name "gradle-wrapper.properties" -exec cat {} \;
-          
       - name: Build debug APK
         run: cordova build android --debug
         
